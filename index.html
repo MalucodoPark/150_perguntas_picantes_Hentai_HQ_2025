@@ -197,7 +197,7 @@
     titulo: "Seu Quiz +18",
   descricao: "Conteúdo adulto (+18). Este quiz tem finalidade recreativa; as porcentagens são aproximadas e não possuem valor científico.",
   finalMessage: "\n".repeat(20) + "Obrigado por responder! Esta é a mensagem final que você definiu." + "\n".repeat(20),
-  whatsappNumber: "5585997469454", // só dígitos (com DDI)
+  whatsappNumber: "", // só dígitos (com DDI)
   firstMessage: "Oi! Quero participar do quiz. Pode me atender?",
     sheetWebAppURL: "https://script.google.com/macros/s/AKfycbxJ2j4PJyHmUWC4rcefgCjEVMvAhpEvMo3VOoLsYcHOJQ2L7bS_CLDE70E1Gixr5KQ/exec",
     generos: ["Homem","Mulher"],
@@ -455,6 +455,7 @@
     elProgress.style.width = '0%';
     renderGeneroChips();
     renderOrientacaoChips();
+    document.body.dataset.stage = 'agegate'; // 🔹 inicia no +18
   }
 
   // Perguntas
@@ -526,6 +527,7 @@
   }
 
   function mostrarResultado(){
+    document.body.dataset.stage = 'result';  // 🔹 no resultado
     screenQuiz.style.display = 'none';
     screenResult.classList.add('show');
     elFinalMessage.textContent = quizConfig.finalMessage || '';
@@ -562,40 +564,43 @@
 
   // ===== WhatsApp =====
   function buildWhatsAppText(){
-    const linhasTopo = [];
-    const orientacaoFinal = (selectedOrientacao === 'Outro' ? (orientacaoOutro.value || 'Outro') : selectedOrientacao) || '';
-    const generoFinal = selectedGenero || '';
+  const linhasTopo = [];
+  const orientacaoFinal = (selectedOrientacao === 'Outro' ? (orientacaoOutro.value || 'Outro') : selectedOrientacao) || '';
+  const generoFinal = selectedGenero || '';
 
-    // Saudação topo
-    const primeira = (quizConfig.firstMessage || "Olá!");
-    linhasTopo.push(primeira);
+  const primeira = (quizConfig.firstMessage || "Olá!");
+  linhasTopo.push(primeira);
 
-    // Tapete de * (50 linhas)
-    const separador = Array.from({length: 50}, () => "*").join("\n");
-    linhasTopo.push(separador);
+  // Tapete de * (50 linhas)
+  const separador = Array.from({length: 50}, () => "*").join("\n");
+  linhasTopo.push(separador);
 
-    // Bloco final (dados + respostas)
-    const linhasFim = [];
-    linhasFim.push(`*${quizConfig.titulo || 'Quiz'}*`);
-    linhasFim.push('');
-    linhasFim.push('*Dados iniciais*');
-    linhasFim.push(`Idade: ${userInfo.idade}`);
-    linhasFim.push(`Gênero: ${generoFinal}`);
-    linhasFim.push(`Altura: ${userInfo.altura} cm`);
-    linhasFim.push(`Peso: ${userInfo.peso} kg`);
-    linhasFim.push(`Orientação: ${orientacaoFinal}`);
-    linhasFim.push('');
-    linhasFim.push('*Respostas*');
-    quizConfig.perguntas.forEach((p, i)=>{
-      const idx = respostas[i];
-      const r = idx !== null ? p.opcoes[idx] : '(sem resposta)';
-      linhasFim.push(`${i+1}. ${p.texto}\n- ${r}`);
-    });
-    linhasFim.push('');
-    if (quizConfig.finalMessage) linhasFim.push(quizConfig.finalMessage);
+  // Bloco final (dados + respostas)
+  const linhasFim = [];
+  linhasFim.push(`*${quizConfig.titulo || 'Quiz'}*`);
+  linhasFim.push('');
+  linhasFim.push('*Dados iniciais*');
+  linhasFim.push(`Idade: ${userInfo.idade}`);
+  linhasFim.push(`Gênero: ${generoFinal}`);
+  linhasFim.push(`Altura: ${userInfo.altura} cm`);
+  linhasFim.push(`Peso: ${userInfo.peso} kg`);
+  linhasFim.push(`Orientação: ${orientacaoFinal}`);
+  linhasFim.push('');
+  linhasFim.push('*Respostas*');
 
-    return [...linhasTopo, ...linhasFim].join('\n');
-  }
+  // 👉 Aqui vai o novo formato da linha
+  quizConfig.perguntas.forEach((p, i)=>{
+    const idx = respostas[i];
+    const r = idx !== null ? p.opcoes[idx] : '(sem resposta)';
+    const pergunta = String(p.texto || '').replace(/\s+/g,' ').trim();
+    linhasFim.push(`PERGUNTA *${pergunta}:* ${r}`);
+  });
+
+  linhasFim.push('');
+  if (quizConfig.finalMessage) linhasFim.push(quizConfig.finalMessage);
+
+  return [...linhasTopo, ...linhasFim].join('\n');
+}
 
   function enviarWhatsApp(){
     const texto = buildWhatsAppText();
@@ -755,15 +760,19 @@ function renderPercents() {
     return { idade, altura, peso, genero: selectedGenero, orientacao: orientacaoVal };
   }
 
-  function startQuiz(){
+    function startQuiz(){
     const dados = validarPreDados();
     if(!dados) return;
 
-    userInfo.idade = dados.idade; userInfo.altura = dados.altura; userInfo.peso = dados.peso; userInfo.genero = dados.genero; userInfo.orientacao = dados.orientacao;
+    document.body.dataset.stage = 'quiz'; // <-- só aqui depois que validou
+    userInfo.idade = dados.idade;
+    userInfo.altura = dados.altura;
+    userInfo.peso = dados.peso;
+    userInfo.genero = dados.genero;
+    userInfo.orientacao = dados.orientacao;
 
     screenIntro.style.display = 'none';
     screenQuiz.style.display = '';
-
     indice = 0;
     renderPergunta();
     updateBotoes();
