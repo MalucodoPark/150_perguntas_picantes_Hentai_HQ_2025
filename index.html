@@ -71,6 +71,13 @@
   .chip-group{display:flex; flex-wrap:wrap; gap:8px}
   .chip{padding:10px 14px; border-radius:999px; background:#0b1220; border:1px solid var(--ring); cursor:pointer; font-weight:600; color:var(--text)}
   .chip[aria-pressed="true"]{background:linear-gradient(180deg, rgba(34,197,94,.12), rgba(59,130,246,.12)); box-shadow:0 0 0 2px #1e3a8a inset, 0 0 0 1px #14532d inset}
+   
+   /* Mostrar o texto só na 1ª página (agegate) */
+    [data-stage="intro"]  #headerText,
+    [data-stage="quiz"]   #headerText,
+    [data-stage="result"] #headerText {
+      display: none;
+    }
 </style>
 
 </head>
@@ -78,9 +85,11 @@
   <div class="container">
     <div class="card" role="group" aria-label="Quiz">
       <div class="header">
-        <div>
-          <div class="title">Seu Quiz</div>
-          <div id="quizDesc" class="subtitle">Personalize na seção <code>CONFIGURAÇÃO</code>.</div>
+        <div id="headerText">
+          <div class="title">Seu Quiz +18</div>
+          <div id="quizDesc" class="subtitle">
+            Conteúdo adulto (+18). Este quiz tem finalidade recreativa; as porcentagens são aproximadas e não possuem valor científico.
+          </div>
         </div>
         <div class="pill" id="stepLabel">+18</div>
       </div>
@@ -775,15 +784,17 @@ function renderPercents() {
   });
 
   btnStart?.addEventListener('click', startQuiz);
-  btnIntroBack?.addEventListener('click', ()=>{
+    btnIntroBack?.addEventListener('click', ()=>{
     screenIntro.style.display = 'none';
     screenAgeGate.style.display = '';
     elStepLabel.textContent = '+18';
+    document.body.dataset.stage = 'agegate';
   });
-  btnAgeContinue?.addEventListener('click', ()=>{
+    btnAgeContinue?.addEventListener('click', ()=>{
     screenAgeGate.style.display = 'none';
     screenIntro.style.display = '';
     elStepLabel.textContent = 'Pré-quiz';
+    document.body.dataset.stage = 'intro';
   });
   btnAgeExit?.addEventListener('click', ()=>{
     window.location.href = 'about:blank';
