@@ -891,40 +891,75 @@ function renderPercents() {
  (function(){
   // ===== AJUSTE AQUI =====
   const landingImage = 'home.jpg'; // imagem da tela inicial
-  const TOTAL_BG = 240;            // total de imagens sequenciais
-  const IMG_DIR  = '.';            // '.' se estiver na raiz; 'img' se estiver em /img
-  const EXT      = 'jpg';          // 'jpg' | 'png' | 'webp'
+  const TOTAL_BG = 240;        // quantidade de imagens da sequência
+  const DIR      = '.';        // '.' na raiz ou 'img' se estiver em /img
+  const EXTS     = ['webp','jpg','jpeg','png']; // ordem de tentativas
+  const LANDING_CANDIDATES = ['home.webp','home.jpg','home.jpeg','home.png']; // 1ª que existir
   // =======================
-
-  // gera: bg001.jpg ... bg240.jpg (com zero-padding)
-  const bgImages = Array.from({ length: TOTAL_BG }, (_, i) =>
-    `${IMG_DIR}/bg${String(i + 1).padStart(3, '0')}.${EXT}`
-  );
-
-  function applyBg(url){
-    if (!url) return;
-    document.documentElement.style.setProperty('--bg-img', `url("${url}")`);
-  }
-
-  // pré-carrega e loga no console (erros 404 não quebram o site)
-  [...new Set([...(bgImages||[]), landingImage].filter(Boolean))].forEach(src=>{
-    const im = new Image();
-    im.onload  = ()=>console.log('BG OK:', src);
-    im.onerror = ()=>console.warn('BG ERRO:', src, '→ arquivo não encontrado?');
-    im.src = src;
-  });
 
   let landing = null;
   let pool = [];
   let last = null;
+  let resolvedList = []; // lista final, só com arquivos que realmente existem
+  let ready = false;
 
-  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const pad = n => String(n).padStart(3,'0');
+  const bases = Array.from({length: TOTAL_BG}, (_,i)=> `${DIR}/bg${pad(i+1)}`);
 
-  function refill(){
-    pool = bgImages.filter(x => x && x !== landing);
-    if (!pool.length && bgImages.length) pool = bgImages.slice();
+  function tryLoad(url){
+    return new Promise(res=>{
+      const im = new Image();
+      im.onload  = ()=>res(url);
+      im.onerror = ()=>res(null);
+      im.src = url;
+    });
+  }
+  async function firstExisting(urls){
+    for (const u of urls){
+      const ok = await tryLoad(u);
+      if (ok) return ok;
+    }
+    return null;
   }
 
+  async function resolveAll(){
+    // 1) Descobre a landing (primeira que existir)
+    landing = await firstExisting(LANDING_CANDIDATES.map(f => `${DIR}/${f}`));
+    if (!landing) console.warn('Nenhuma landing encontrada entre:', LANDING_CANDIDATES);
+
+    // 2) Resolve TODAS as bgNNN.* que existem (qualquer extensão suportada)
+    const promises = bases.map(b => firstExisting(EXTS.map(ext => `${b}.${ext}`)));
+    const results = await Promise.all(promises);
+    resolvedList = results.filter(Boolean);
+
+    if (!resolvedList.length) {
+      console.warn('Nenhuma imagem da sequência encontrada (.webp/.jpg/.jpeg/.png).');
+    }
+
+    // Aplica landing se tiver
+    if (landing) setBg(landing);
+    refill();
+    ready = true;
+    console.log(`BGs válidas: ${resolvedList.length}`);
+  }
+
+  function setBg(url){
+    // segurança extra: só aplica se carregar
+    tryLoad(url).then(ok=>{
+      if (ok) {
+        document.documentElement.style.setProperty('--bg-img', `url("${ok}")`);
+        console.log('BG OK:', ok);
+      } else {
+        console.warn('BG ERRO ao aplicar:', url);
+      }
+    });
+  }
+
+  const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+  function refill(){
+    pool = resolvedList.filter(x => x && x !== landing);
+    if (!pool.length && resolvedList.length) pool = resolvedList.slice();
+  }
   function nextBg(){
     if (!pool.length) refill();
     if (!pool.length) return null;
@@ -937,17 +972,12 @@ function renderPercents() {
     last = choice;
     return choice;
   }
-
-  function changeAfterTick(){ setTimeout(()=>applyBg(nextBg()), 0); }
-
-  // aplica landing ao carregar
-  function setLanding(){
-    landing = landingImage || (bgImages.length ? pick(bgImages) : null);
-    applyBg(landing);
-    refill();
+  function changeAfterTick(){
+    if (!ready) return;          // ainda resolvendo as imagens
+    const url = nextBg();
+    if (url) setBg(url);
   }
 
-  // amarra nos botões
   function wire(){
     const btnStart = document.getElementById('btnStart');
     const btnNext  = document.getElementById('btnNext');
@@ -955,14 +985,15 @@ function renderPercents() {
     btnStart?.addEventListener('click', changeAfterTick);
     btnNext ?.addEventListener('click', changeAfterTick);
 
-    // Pular pergunta (criado depois)
+    // "Pular pergunta"
     document.addEventListener('click', (e)=>{
       if (e.target && e.target.id === 'btnSkip') changeAfterTick();
     });
   }
 
-  setLanding();
+  // Inicia
   wire();
+  resolveAll();
 })();
   // Start
   init();
