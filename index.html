@@ -117,6 +117,10 @@
         <div class="question">Antes de começar, preencha seus dados</div>
         <div class="form" aria-label="Dados iniciais">
           <div class="field">
+            <label for="apelidoInput">Apelido</label>
+            <input id="apelidoInput" class="input" type="text" placeholder="Ex: Rafa" />
+          </div>
+          <div class="field">
             <label>Gênero</label>
             <div id="generoChips" class="chip-group" role="radiogroup" aria-label="Selecionar gênero"></div>
             <div id="errGenero" class="error">Selecione uma opção.</div>
@@ -361,7 +365,8 @@
   // Estado
   let indice = 0;
   const respostas = new Array(quizConfig.perguntas.length).fill(null);
-  const userInfo = { idade: null, altura: null, peso: null, genero: "", orientacao: "" };
+  const userInfo = { idade: null, altura: null, peso: null, genero: "", orientacao: "", apelido: "" };
+
 
   // Elementos
   const elTitle = document.querySelector('.title');
@@ -396,6 +401,7 @@
   const errGenero = document.getElementById('errGenero');
   const generoChipWrap = document.getElementById('generoChips');
   const orientacaoChipWrap = document.getElementById('orientacaoChips');
+  const apelidoInput = document.getElementById('apelidoInput');
 
   // Chips
   let selectedGenero = null;
@@ -571,11 +577,8 @@
   const primeira = (quizConfig.firstMessage || "Olá!");
   linhasTopo.push(primeira);
 
-  // Tapete de * (50 linhas)
-  const separador = Array.from({length: 50}, () => "*").join("\n");
-  linhasTopo.push(separador);
-
-  // Bloco final (dados + respostas)
+  
+    // Bloco final (dados + respostas)
   const linhasFim = [];
   linhasFim.push(`*${quizConfig.titulo || 'Quiz'}*`);
   linhasFim.push('');
@@ -703,6 +706,7 @@ function renderPercents() {
         'Timestamp': new Date().toISOString(),
         'Título do Quiz': (quizConfig.titulo || '').toString().trim(),
         'Descrição': (quizConfig.descricao || '').toString().trim(),
+        'Apelido': userInfo.apelido ?? '',       // ← só planilha
         'Idade': userInfo.idade ?? '',
         'Gênero': generoFinal,
         'Altura (cm)': userInfo.altura ?? '',
@@ -744,6 +748,7 @@ function renderPercents() {
 
   // Validação
   function validarPreDados(){
+    const apelido = (apelidoInput.value || '').trim();
     const idade = parseInt(idadeInput.value,10);
     const altura = parseInt(alturaInput.value,10);
     const peso = parseFloat(pesoInput.value);
@@ -757,18 +762,20 @@ function renderPercents() {
 
     if([errGenero,errIdade,errAltura,errPeso,errOrientacao].some(e=>e.style.display==='block')) return null;
 
-    return { idade, altura, peso, genero: selectedGenero, orientacao: orientacaoVal };
+    return { idade, altura, peso, genero: selectedGenero, orientacao: orientacaoVal, apelido };
   }
 
     function startQuiz(){
     const dados = validarPreDados();
     if(!dados) return;
 
-    document.body.dataset.stage = 'quiz'; // <-- só aqui depois que validou
-    userInfo.idade = dados.idade;
-    userInfo.altura = dados.altura;
-    userInfo.peso = dados.peso;
-    userInfo.genero = dados.genero;
+    document.body.dataset.stage = 'quiz';
+
+    userInfo.apelido    = dados.apelido;   // ⬅️ SALVAR APELIDO AQUI
+    userInfo.idade      = dados.idade;
+    userInfo.altura     = dados.altura;
+    userInfo.peso       = dados.peso;
+    userInfo.genero     = dados.genero;
     userInfo.orientacao = dados.orientacao;
 
     screenIntro.style.display = 'none';
