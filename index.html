@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz – +18 com Pré‑Dados e WhatsApp</title>
+ <style>
+  :root{
+    --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb;
+    --accent:#22c55e; --accent-2:#3b82f6; --danger:#ef4444; --ring:#1f2937;
+    --bg-img: url('home.jpg'); /* imagem inicial; o JS troca depois */
+  }
+
+  *{box-sizing:border-box}
+
+  /* ÚNICA regra de background */
+  body{
+    margin:0;
+    font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Noto Sans,Arial;
+    color:var(--text);
+    min-height:100dvh; display:grid; place-items:center; padding:25px;
+    background:
+      linear-gradient(180deg, rgba(2,6,23,.72), rgba(2,6,23,.88)),
+      var(--bg-img) center / cover no-repeat,
+      radial-gradient(1200px 800px at 20% -10%, #1e293b, transparent),
+      radial-gradient(900px 700px at 120% 10%, #0b1324, transparent),
+      var(--bg);
+  }
+
+  .container{width:min(900px,100%)}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+        border:1px solid var(--ring); box-shadow:0 10px 30px rgba(0,0,0,.35);
+        border-radius:20px; padding:24px; backdrop-filter:saturate(130%) blur(6px);}
+  .header{display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom:8px}
+  .title{font-size:clamp(20px,3.4vw,30px); font-weight:700; color:var(--text)}
+  .subtitle{color:var(--muted); font-size:19px}
+  .progress-wrap{margin:14px 0 22px}
+  .progress-bar{height:10px; background:#0b1220; border-radius:999px; overflow:hidden; border:1px solid var(--ring)}
+  .progress-bar>div{height:100%; background:linear-gradient(90deg, var(--accent-2), var(--accent)); width:0%; transition:width .25s ease}
+  .question{font-size:clamp(18px,3vw,22px); font-weight:600; margin:12px 0 18px; color:var(--text)}
+  .options{display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:16px}
+  @media(min-width:640px){.options{grid-template-columns:repeat(3,1fr)}}
+  .btn{appearance:none; border:none; cursor:pointer; padding:14px 16px; border-radius:14px;
+       background:#0b1220; color:var(--text); border:1px solid var(--ring); font-weight:600;
+       letter-spacing:.2px; transition: transform .04s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;}
+  .btn:hover{transform:translateY(-1px); border-color:#374151}
+  .btn:active{transform:translateY(0)}
+  .btn[disabled]{opacity:.55; cursor:not-allowed}
+  .option{display:flex; align-items:center; justify-content:center; text-align:center; min-height:64px}
+  .option.selected{outline:2px solid transparent; border-color:transparent;
+       background:linear-gradient(180deg, rgba(34,197,94,.12), rgba(59,130,246,.12)), #0b1220;
+       box-shadow:0 0 0 2px #1e3a8a inset, 0 0 0 1px #14532d inset}
+  .nav{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:8px}
+  .left-actions,.right-actions{display:flex; gap:10px; align-items:center}
+  .pill{font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid var(--ring); background:#0b1220; color:var(--muted)}
+  .result{display:none}
+  .result.show{display:block}
+  .answers{margin:12px 0; padding:0; list-style:none; display:grid; gap:8px}
+  .answers li{background:#0b1220; border:1px solid var(--ring); border-radius:12px; padding:12px}
+
+  /* Form */
+  .form{display:grid; gap:12px; grid-template-columns:1fr}
+  @media(min-width:640px){.form{grid-template-columns:repeat(2,1fr)}}
+  .field{display:flex; flex-direction:column; gap:6px}
+  .field label{font-size:13px; color:var(--muted)}
+  .input{appearance:none; background:#0b1220; color:var(--text); border:1px solid var(--ring); border-radius:10px; padding:12px}
+  .row-span-2{grid-column:1 / -1}
+  .error{color:var(--danger); font-size:12px; display:none}
+
+  /* Chips */
+  .chip-group{display:flex; flex-wrap:wrap; gap:8px}
+  .chip{padding:10px 14px; border-radius:999px; background:#0b1220; border:1px solid var(--ring); cursor:pointer; font-weight:600; color:var(--text)}
+  .chip[aria-pressed="true"]{background:linear-gradient(180deg, rgba(34,197,94,.12), rgba(59,130,246,.12)); box-shadow:0 0 0 2px #1e3a8a inset, 0 0 0 1px #14532d inset}
+</style>
+
+</head>
+<body>
+  <div class="container">
+    <div class="card" role="group" aria-label="Quiz">
+      <div class="header">
+        <div>
+          <div class="title">Seu Quiz</div>
+          <div id="quizDesc" class="subtitle">Personalize na seção <code>CONFIGURAÇÃO</code>.</div>
+        </div>
+        <div class="pill" id="stepLabel">+18</div>
+      </div>
+
+      <div class="progress-wrap" aria-hidden="true">
+        <div class="progress-bar" aria-label="Progresso do quiz" aria-live="polite"><div id="progress"></div></div>
+      </div>
+
+      <!-- TELA +18 -->
+      <div id="screen-agegate">
+        <div class="question" aria-live="polite" style="text-align:center;font-size:clamp(28px,6vw,48px);">+18</div>
+        <p class="subtitle" style="text-align:center;margin-top:-4px">Conteúdo destinado a maiores de 18 anos</p>
+        <div class="nav">
+          <div class="left-actions">
+            <button id="btnAgeExit" class="btn" type="button">Sair</button>
+          </div>
+          <div class="right-actions">
+            <button id="btnAgeContinue" class="btn" type="button">Avançar ⟶</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tela de pré-dados -->
+      <div id="screen-intro" style="display:none">
+        <div class="question">Antes de começar, preencha seus dados</div>
+        <div class="form" aria-label="Dados iniciais">
+          <div class="field">
+            <label>Gênero</label>
+            <div id="generoChips" class="chip-group" role="radiogroup" aria-label="Selecionar gênero"></div>
+            <div id="errGenero" class="error">Selecione uma opção.</div>
+          </div>
+          <div class="field">
+            <label for="idadeInput">Idade</label>
+            <input id="idadeInput" class="input" type="number" min="0" inputmode="numeric" placeholder="Ex: 28" />
+            <div id="errIdade" class="error">Informe uma idade válida (18+).</div>
+          </div>
+          <div class="field">
+            <label for="alturaInput">Altura (cm)</label>
+            <input id="alturaInput" class="input" type="number" min="0" inputmode="numeric" placeholder="Ex: 172" />
+            <div id="errAltura" class="error">Informe a altura em centímetros.</div>
+          </div>
+          <div class="field">
+            <label for="pesoInput">Peso (kg)</label>
+            <input id="pesoInput" class="input" type="number" min="0" inputmode="numeric" placeholder="Ex: 70" />
+            <div id="errPeso" class="error">Informe um peso válido.</div>
+          </div>
+          <div class="field row-span-2">
+            <label>Orientação</label>
+            <div id="orientacaoChips" class="chip-group" role="radiogroup" aria-label="Selecionar orientação"></div>
+            <input id="orientacaoOutro" class="input" type="text" placeholder="Digite sua orientação" style="display:none;margin-top:6px" />
+            <div id="errOrientacao" class="error">Selecione uma opção ou informe sua orientação.</div>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="left-actions">
+            <button id="btnIntroBack" class="btn" type="button">⟵ Voltar</button>
+          </div>
+          <div class="right-actions">
+            <button id="btnStart" class="btn" type="button">Avançar ⟶</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tela do quiz -->
+      <div id="screen-quiz" style="display:none">
+        <div id="question" class="question">Carregando…</div>
+        <div id="options" class="options" role="listbox" aria-label="Opções"></div>
+        <div class="nav">
+          <div class="left-actions">
+            <button id="btnBack" class="btn" type="button">⟵ Voltar</button>
+          </div>
+          <div class="right-actions">
+            <button id="btnNext" class="btn" type="button" disabled>Avançar ⟶</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tela de resultado -->
+      <div id="screen-result" class="result" aria-live="polite">
+        <h2>Resultado</h2>
+        <p id="finalMessage">Mensagem final aqui.</p>
+        <h3>Seus dados</h3>
+        <ul class="answers" id="userData"></ul>
+        <h3>Suas escolhas</h3>
+        <ol id="answers" class="answers"></ol>
+        <div class="nav">
+          <div class="left-actions">
+            <button id="btnReiniciar" class="btn" type="button">Começar de Novo!</button>
+          </div>
+          <div class="right-actions">
+            <button id="btnWhatsApp" class="btn" type="button">Concluir</button>
+          </div>
+        </div>
+        <p class="footer-note">Ao concluir, as respostas serão registradas na planilha e o WhatsApp será aberto.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // =======================
+  // 🔧 CONFIGURAÇÃO
+  // =======================
+  const quizConfig = {
+    percentLabels: ["Safado(a)", "Santo(a)", "Indiferente(a)"],
+    titulo: "Seu Quiz +18",
+  descricao: "Conteúdo adulto (+18). Este quiz tem finalidade recreativa; as porcentagens são aproximadas e não possuem valor científico.",
+  finalMessage: "\n".repeat(20) + "Obrigado por responder! Esta é a mensagem final que você definiu." + "\n".repeat(20),
+  whatsappNumber: "5585997469454", // só dígitos (com DDI)
+  firstMessage: "Oi! Quero participar do quiz. Pode me atender?",
+    sheetWebAppURL: "https://script.google.com/macros/s/AKfycbxJ2j4PJyHmUWC4rcefgCjEVMvAhpEvMo3VOoLsYcHOJQ2L7bS_CLDE70E1Gixr5KQ/exec",
+    generos: ["Homem","Mulher"],
+    orientacoes: ["Heterossexual","Homossexual","Bissexual","Assexual","Pansexual","Prefiro não dizer","Outro"],
+    perguntas: [
+       { texto: "No primeiro encontro, você prefere beber o quê?", opcoes: ["Topo qualquer drink 🍹", "Só socialmente", "Não bebo"] },
+            { texto: "Bebida favorita para relaxar?", opcoes: ["Drinks/cerveja/vinho", "Suco/refrigerante", "Água/sem bebida"] },
+            { texto: "Você tem/curte animais de estimação?", opcoes: ["Amo (tenho ou teria) 🐶", "Gosto, mas não tenho", "Prefiro não"] },
+            { texto: "Fim de semana ideal?", opcoes: ["Sair (bar/festa/parque)", "Filme/jantar em casa", "Ficar off total"] },
+            { texto: "Praia ou serra?", opcoes: ["Praia ☀️", "Tanto faz", "Serra 🏔️"] },
+            { texto: "Você curte dançar?", opcoes: ["Sim, me jogo na pista", "Às vezes", "Quase nunca"] },
+            { texto: "Topa viagem surpresa?", opcoes: ["Sim, adoro", "Talvez, avisando antes", "Prefiro planejar tudo"] },
+            { texto: "Música para o clima?", opcoes: ["Faço playlist 🔥", "Depende do humor", "Prefiro silêncio"] },
+            { texto: "Aplicativos de encontro:", opcoes: ["Uso sem tabu", "De vez em quando", "Não uso"] },
+            { texto: "Ir a um bar/evento LGBT+ com o par:", opcoes: ["Topo e curto", "Talvez, para conhecer", "Não me sinto à vontade"] },
+            { texto: "Beijo em público:", opcoes: ["Sem medo de carinho", "Discreto, quase nada", "Tanto faz"] },
+            { texto: "Beijo em público (leve) te incomoda?", opcoes: ["Tranquilo, curto", "Depende do lugar", "Prefiro evitar"] },
+            { texto: "Beijo em público te incomoda?", opcoes: ["Gosto e não ligo", "Prefiro evitar", "Depende do lugar"] },
+            { texto: "Carinho em público (mão dada/abraço):", opcoes: ["Curto bastante", "Quase não faço", "Depende do lugar"] },
+            { texto: "Você guarda segredos com facilidade", opcoes: ["Sim", "Não", "Prefiro não dizer"] },
+            { texto: "Trairia Alguma vez?", opcoes: ["Sim", "Não", "Talvez"] },
+            { texto: "Ritual pós-encontro:", opcoes: ["Segunda rodada 😏", "Abraço e dormir", "Tanto faz"] },
+            { texto: "Surpresas no dia/horário:", opcoes: ["Amo surpresa", "Gosto de planejar", "Tanto faz"] },
+            { texto: "Música no momento:", opcoes: ["Playlist quente", "Silêncio/ambiente", "Indiferente"] },
+            { texto: "Cheiros e perfumes:", opcoes: ["Amo perfume marcante", "Quase sem cheiro", "Indiferente"] },
+            { texto: "Cheiros/perfume marcante:", opcoes: ["Amo perfume forte", "Quase sem cheiro", "Indiferente"] },
+
+            { texto: "Beijos: como prefere?", opcoes: ["Intensos e demorados", "Leves e calmos", "Tanto faz"] },
+            { texto: "Beijo com mordidinha leve:", opcoes: ["Adoro", "Às vezes", "Prefiro não"] },
+            { texto: "Cartas bilhetes eróticos escritos à mão:", opcoes: ["Amo a ideia", "Talvez, de vez em quando", "Não curto"] },
+            { texto: "Roupa preferida nele(a):", opcoes: ["Lingerie / cueca estilosa", "Pijama/roupa básica", "Sem preferência"] },
+            { texto: "Iniciativa:", opcoes: ["Eu tomo a iniciativa", "Prefiro ser convidado(a)", "Tanto faz"] },
+            { texto: "Tomar a iniciativa por mensagem:", opcoes: ["Faço sempre", "Quase nunca", "Às vezes"] },
+            { texto: "Tom do momento:", opcoes: ["Quente e acelerado", "Lento e romântico", "Conforme a vibe"] },
+            { texto: "Tom do encontro:", opcoes: ["Quente e intenso", "Calmo e carinhoso", "Vai do momento"] },
+            { texto: "Banho a dois:", opcoes: ["Super topo", "Prefiro sozinho(a)", "Tanto faz"] },
+            { texto: "Chuveiro a dois:", opcoes: ["Sempre topo", "Prefiro sozinho(a)", "Indiferente"] },
+            { texto: "Fotos sensuais:", opcoes: ["Curto mandar/receber", "Não mando/evito", "Talvez em raros momentos"] },
+            { texto: "Fotos sensuais entre o casal:", opcoes: ["Mando/recebo", "Evito total", "Raramente"] },
+            { texto: "Te agrada ouvir elogios mais ousados?", opcoes: ["Adoro", "Prefiro discretos", "Depende de quem/como"] },
+            { texto: "Sexo matinal te agrada?", opcoes: ["Amo começar o dia assim", "Prefiro à noite", "Tanto faz"] },
+            { texto: "Frequência ideal:", opcoes: ["Sempre que der", "Só quando pinta clima", "Sem regra"] },
+            { texto: "Assistir algo juntos para esquentar:", opcoes: ["Curto bastante", "Prefiro conversar", "Depende do humor"] },
+            { texto: "Filminho adulto juntos:", opcoes: ["Topo assistir", "Prefiro não", "Talvez"] },
+            { texto: "Assistir/ler conteúdo erótico juntos (soft):", opcoes: ["Curto sim", "Talvez, depende do dia", "Não curto"] },
+            { texto: "Música no quarto:", opcoes: ["Faço playlist quente", "Prefiro silêncio", "Indiferente"] },
+
+            { texto: "Preliminares…", opcoes: ["Longas e criativas", "Curtinhas, sem exagero", "Indiferente"] },
+            { texto: "Qual é sua forma favorita de preliminares?", opcoes: ["Toque", "Olhar", "Outra"] },
+            { texto: "Luz no quarto:", opcoes: ["Acesa, adoro ver tudo", "Apagada, mais discreto", "Tanto faz"] },
+            { texto: "Mensagens picantes:", opcoes: ["Curto e mando também", "Prefiro evitar", "Depende do clima"] },
+            { texto: "Curte mandar áudios picantes?", opcoes: ["Sim, adoro", "Prefiro não", "Depende do momento"] },
+            { texto: "Sussurrar no ouvido (dirty talk leve):", opcoes: ["Amo/super curto", "Depende do clima", "Prefiro silêncio"] },
+            { texto: "Apelidos/elogios mais ousados:", opcoes: ["Gosto bastante", "Depende do momento", "Prefiro evitar"] },
+            { texto: "Provocar em público de forma discreta:", opcoes: ["Acho excitante", "Talvez, bem discreto", "Não curto"] },
+            { texto: "Topa um strip poker ou jogo de desafios leve?", opcoes: ["Sim, bora brincar", "Talvez, se for leve", "Prefiro não"] },
+            { texto: "Jogo de “Verdade ou Desafio” (versão leve/ousada):", opcoes: ["Topo", "Talvez, com limites", "Prefiro não"] },
+            { texto: "Topa usar venda nos olhos?", opcoes: ["Sim, curto a ideia", "Não faz meu estilo", "Talvez"] },
+            { texto: "Massagem antes do clima:", opcoes: ["Sempre peço", "Quase nunca", "Depende do dia"] },
+            { texto: "Massagem nos pés (dar/receber):", opcoes: ["Amo/curioso(a)", "Às vezes", "Não faz meu estilo"] },
+            { texto: "Brincadeiras com gelo/temperatura:", opcoes: ["Amo sensações", "Não curto", "Talvez"] },
+            { texto: "Explorar óleo corporal:", opcoes: ["Gosto muito", "Não curto meleca", "Talvez"] },
+            { texto: "Explorar roupa íntima/lingerie juntos (experimentar):", opcoes: ["Curto muito", "Talvez, de vez em quando", "Prefiro não"] },
+            { texto: "Fantasia com figurino/tema:", opcoes: ["Amo brincar", "Não curto", "Talvez"] },
+            { texto: "Fantasia a dois:", opcoes: ["Topa e gosta de inventar", "Não é minha praia", "Talvez, se rolar"] },
+            { texto: "Surpresas no quarto:", opcoes: ["Amo novidades", "Melhor sem surpresas", "Depende"] },
+            { texto: "Brincadeira ousada leve:", opcoes: ["Curto experimentar", "Passo", "Talvez"] },
+            { texto: "Lugar diferente (discreto) te atrai?", opcoes: ["Gosto de inovar", "Prefiro só no quarto", "Talvez, se seguro"] },
+            { texto: "Explorar no mar/piscina (segurança e discrição):", opcoes: ["Topo sim", "Talvez, melhor piscina", "Prefiro não"] },
+            { texto: "No carro (parado e discreto):", opcoes: ["Topo sim", "Talvez, dependendo do local", "Prefiro não"] },
+            { texto: "Câmera ligada (privado) entre o casal:", opcoes: ["Curto videochamada", "Prefiro não", "Depende da confiança"] },
+
+            { texto: "Explorar brinquedos:", opcoes: ["Curioso(a) e aberto(a)", "Prefiro não usar", "Indiferente"] },
+            { texto: "Brinquedos a dois:", opcoes: ["Topo testar", "Prefiro sem", "Depende"] },
+            { texto: "Vibrador controlado por app:", opcoes: ["Topo testar", "Talvez, em casa", "Prefiro não"] },
+            { texto: "Passeio em sex shop a dois:", opcoes: ["Bora explorar", "Talvez, ver de leve", "Prefiro não"] },
+            { texto: "Tapinhas/pegada mais firme:", opcoes: ["Gosto bastante", "Prefiro leve", "Conforme a vibe"] },
+            { texto: "Algemas/fitas (leve e seguro):", opcoes: ["Gosto/tenho curiosidade", "Talvez, com limites", "Prefiro não"] },
+            { texto: "Combinar palavra de segurança (limites):", opcoes: ["Claro, importante", "Talvez, se precisar", "Não vejo necessidade"] },
+            { texto: "Roleplay adulto (chefe/assistente):", opcoes: ["Curto a ideia", "Talvez, de vez em quando", "Não curto"] },
+            { texto: "“Jogo do médico” (adulto, consensual):", opcoes: ["Curioso(a)/topo", "Talvez, uma vez", "Não curto"] },
+            { texto: "Provocar e segurar (edging):", opcoes: ["Gosto bastante", "Talvez, às vezes", "Prefiro não"] },
+            { texto: "Comandos de voz (dar/seguir) no momento:", opcoes: ["Curto conduzir/seguir", "Talvez alternando", "Prefiro sem"] },
+            { texto: "Fazer/receber striptease:", opcoes: ["Amo a ideia", "Prefiro sem", "Talvez"] },
+            { texto: "Ir a um clube de strip juntos:", opcoes: ["Iria sim", "Talvez, para conhecer", "Não iria"] },
+            { texto: "Espelho na brincadeira (se ver/filtrar poses):", opcoes: ["Curto a ideia", "Tanto faz", "Não curto"] },
+            { texto: "Ver o(a) parceiro(a) se tocar:", opcoes: ["Gosto/tenho curiosidade", "Talvez, às vezes", "Prefiro não"] },
+            { texto: "Beijaria alguém do mesmo sexo se rolasse clima?", opcoes: ["Sim, beijaria", "Talvez, curiosidade leve", "Não beijaria"] },
+            { texto: "Carinho/experiência com pessoa do mesmo sexo (leve):", opcoes: ["Conversaria/toparia", "Talvez, curiosidade leve", "Não topo"] },
+            { texto: "Trio consensual (MFM/MMF/FFM):", opcoes: ["Conversaria/toparia", "Talvez, com regras", "Não topo"] },
+            { texto: "Iria a uma praia/colônia de nudismo?", opcoes: ["Sim, tenho curiosidade", "Talvez, com discrição", "Não iria"] },
+            { texto: "Você se sente desconfortável em ficar pelado na frente de desconhecidos?", opcoes: ["Ficaria", "Tenho muita vergonha.", "Prefiro outro tipo de fetiche"] },
+
+            { texto: "Protagonismo:", opcoes: ["Gosto de liderar", "Prefiro que conduzam", "Tanto faz pra mim"] },
+            { texto: "Protagonismo no momento:", opcoes: ["Gosto de conduzir", "Prefiro ser conduzido(a)", "Alterno"] },
+            { texto: "Prefere ser?", opcoes: ["Prefiro dominar, sempre", "Amo ser submisso", "Outra"] },
+            { texto: "Você se considera numa relação", opcoes: ["100% Ativo", "Versatil", "Passivo"] },
+            { texto: "Você aceitaria alguém", opcoes: ["100% ativo(a)", "Passivo", "Outra"] },
+            { texto: "Já teve expereriencias BI?", opcoes: ["Sim", "Não", "Gostaria"] },
+            { texto: "Já Saiu com gay ou bi?", opcoes: ["Sim", "Não", "Gostaria"] },
+            { texto: "Já Saiu com trans ou sairia?", opcoes: ["Sim", "Não", "Gostaria"] },
+            { texto: "Já Saiu com casada?", opcoes: ["Sim", "Não", "Gostaria"] },
+            { texto: "Qual parte do corpo te da mais prazer?", opcoes: ["Regiao Intima", "Barriga", "Pernas"] },
+            { texto: "Posição favorita:", opcoes: ["A que deixa mais intenso", "A clássica e confortável", "Qualquer uma"] },
+            { texto: "Explorar novas posições:", opcoes: ["Curto testar", "Fico nas clássicas", "Talvez"] },
+            { texto: "Prefere o que?", opcoes: ["Realizar", "Assitir", "Outra"] },
+            { texto: "Falar safadezas:", opcoes: ["Gosto de falar/ouvir", "Prefiro silêncio", "Depende da hora"] },
+            { texto: "Tom de voz durante:", opcoes: ["Gosto de falar safadezas", "Quase não falo", "Vai do clima"] },
+
+            { texto: "Você se toca?", opcoes: ["Sim", "Não", "Outra"] },
+            { texto: "Aceitaria Alguem toca?", opcoes: ["Sim", "Não", "Outra"] },
+            { texto: "Se você pudesse escolher uma fantasia para realizar, qual seria?", opcoes: ["Anal", "Oral", "Prefiro outro tipo de fetiche"] },
+            { texto: "Já fez anal alguma vez na vida?", opcoes: ["Sim", "Não", "Gostaria"] },
+            { texto: "Já fizeram oral em você alguma vez na vida?", opcoes: ["Sim", "Não", "Gostaria"] },
+            { texto: "Qual posicao mais te atrai?", opcoes: ["Quatro", "Joelhos", "Outra"] },
+            { texto: "Ritmo preferido:", opcoes: ["Mais forte", "Mais leve", "Misturado"] },
+            { texto: "Já pensou em introduzir algo maior na hora do sexo?", opcoes: ["Tenho muita vergonha, melhor não", "Estou pensando em começar a usar", "Prefiro outro tipo de fetiche"] },
+
+            { texto: "Gosta de assitir xvideos?", opcoes: ["Sim", "Nunca", "Gostaria"] },
+            { texto: "Já recebeu uma mão amiga?", opcoes: ["Sim", "Nunca", "Gostaria"] },
+            { texto: "Já gozou na boca de alguem?", opcoes: ["Sim", "Nunca", "Gostaria"] },
+            { texto: "Qual fetiche em gozar?", opcoes: ["Na boca", "No cuzinho", "Ambos"] },
+            { texto: "Você curte uma mijada na hora do sexo?", opcoes: ["Nem pensar", "Adoraria essa experiência", "Prefiro outro tipo de fetiche"] },
+            { texto: "Qual tamanho do seu Pênis?", opcoes: ["Maior que 15cm", "Maior que 20cm", "Menor que 10cm"] },
+            { texto: "Qual espessura?", opcoes: ["Fino", "Grosso", "Normal"] }, 
+            { texto: "Último teste de IST?", opcoes: ["Até 3 meses", "3–12 meses", "Mais de 1 ano/Não lembro"] },
+            { texto: "Uso de PrEP/PEP:", opcoes: ["Uso PrEP", "Não uso", "Quero saber mais"] },
+            { texto: "Preferência por proteção (preservativo/barreira):", opcoes: ["Sempre", "Conforme combinado e exames", "Conversamos antes"] },
+            { texto: "Quem leva a proteção?", opcoes: ["Eu levo", "Você leva", "Ambos"] },
+            { texto: "Alergia a látex ou lubrificante?", opcoes: ["Sim", "Não", "Não sei"] },
+            { texto: "Tipo de lubrificante preferido:", opcoes: ["À base de água", "À base de silicone", "Outro/indiferente"] },
+            { texto: "Lubrificante com sabor/aroma:", opcoes: ["Gosto", "Prefiro neutro", "Evito"] },
+            { texto: "Depilação/pele (sua preferência):", opcoes: ["Natural", "Aparado(a)", "Depilado(a)"] },
+            { texto: "Barulho/sons durante:", opcoes: ["À vontade", "Moderado", "Discreto"] },
+            { texto: "Marcas no corpo (sucção/arranhões):", opcoes: ["Ok", "Só onde não aparece", "Prefiro evitar"] },
+            { texto: "Puxar cabelo:", opcoes: ["Gosto", "Bem de leve", "Prefiro não"] },
+            { texto: "Unhas/arranhões:", opcoes: ["Ok", "Leve", "Evito"] },
+            { texto: "Beijo com mais saliva:", opcoes: ["Curto", "Moderado", "Prefiro seco"] },
+            { texto: "Beijo/cheiro no pescoço:", opcoes: ["Amo", "De leve", "Prefiro não"] },
+            { texto: "Perfume forte durante:", opcoes: ["Amo", "Suave", "Evito por alergia"] },
+            { texto: "Privacidade de registros (foto/vídeo):", opcoes: ["Sem registros", "Fotos sem rosto", "Ok com regras claras"] },
+            { texto: "Destino de registros (se houver):", opcoes: ["Apagar depois", "Guardar com permissão", "Não tiro/recebo"] },
+            { texto: "Check-ins de consentimento durante:", opcoes: ["Gosto que pergunte", "Sinais sutis bastam", "Só aviso se algo incomodar"] },
+            { texto: "Pausas para água/respirar:", opcoes: ["Gosto de pausas", "Só quando preciso", "Prefiro sem pausas"] },
+            { texto: "Aftercare (depois):", opcoes: ["Abraço/conversa", "Água/descanso", "Prefiro ficar quieto(a)"] },
+            { texto: "Limitações físicas/lesões a considerar:", opcoes: ["Tenho/explico antes", "Nenhuma relevante", "Prefiro falar na hora"] },
+            { texto: "Temperatura/ambiente:", opcoes: ["Ar ligado", "Ambiente natural", "Tanto faz"] },
+            { texto: "Discrição com vizinhos/roommates:", opcoes: ["Precisa ser discreto", "Normal", "Moro só/sem restrições"] },
+            { texto: "Local para o encontro íntimo:", opcoes: ["Hotel/Airbnb", "Minha casa", "Sua casa"] },
+            { texto: "Exclusividade/combinação sexual:", opcoes: ["Exclusivo entre nós", "Aberto com regras", "Sem rótulos (conversamos)"] },
+            { texto: "Orgasmo: prefere como?", opcoes: ["Juntos se der", "Sem pressa, cada um no seu tempo", "Sem regra"] },
+            { texto: "Ritmo de evolução no encontro:", opcoes: ["Começar leve e subir", "Rápido se houver química", "Vamos sentindo"] },
+            { texto: "Contato com saliva em brinquedos/barreiras:", opcoes: ["Ok", "Só com higiene prévia", "Prefiro evitar"] },
+            { texto: "Higienização de brinquedos:", opcoes: ["Sei e faço certinho", "Aprendemos juntos", "Prefiro não usar"] },
+            { texto: "Mensagens antes (conteúdo explícito):", opcoes: ["Evito conteúdo explícito", "Ok com limites", "Só depois de alinhar"] }
+
+    ]
+  };
+  // =======================
+
+  // Estado
+  let indice = 0;
+  const respostas = new Array(quizConfig.perguntas.length).fill(null);
+  const userInfo = { idade: null, altura: null, peso: null, genero: "", orientacao: "" };
+
+  // Elementos
+  const elTitle = document.querySelector('.title');
+  const elDesc = document.getElementById('quizDesc');
+  const elQuestion = document.getElementById('question');
+  const elOptions = document.getElementById('options');
+  const elStepLabel = document.getElementById('stepLabel');
+  const elProgress = document.getElementById('progress');
+  const btnNext = document.getElementById('btnNext');
+  const btnBack = document.getElementById('btnBack');
+  const screenAgeGate = document.getElementById('screen-agegate');
+  const screenIntro = document.getElementById('screen-intro');
+  const screenQuiz = document.getElementById('screen-quiz');
+  const screenResult = document.getElementById('screen-result');
+  const elFinalMessage = document.getElementById('finalMessage');
+  const elAnswers = document.getElementById('answers');
+  const elUserData = document.getElementById('userData');
+  const btnReiniciar = document.getElementById('btnReiniciar');
+  const btnWhatsApp = document.getElementById('btnWhatsApp');
+  const idadeInput = document.getElementById('idadeInput');
+  const alturaInput = document.getElementById('alturaInput');
+  const pesoInput = document.getElementById('pesoInput');
+  const orientacaoOutro = document.getElementById('orientacaoOutro');
+  const btnStart = document.getElementById('btnStart');
+  const btnIntroBack = document.getElementById('btnIntroBack');
+  const btnAgeContinue = document.getElementById('btnAgeContinue');
+  const btnAgeExit = document.getElementById('btnAgeExit');
+  const errIdade = document.getElementById('errIdade');
+  const errAltura = document.getElementById('errAltura');
+  const errPeso = document.getElementById('errPeso');
+  const errOrientacao = document.getElementById('errOrientacao');
+  const errGenero = document.getElementById('errGenero');
+  const generoChipWrap = document.getElementById('generoChips');
+  const orientacaoChipWrap = document.getElementById('orientacaoChips');
+
+  // Chips
+  let selectedGenero = null;
+  function renderGeneroChips(){
+    generoChipWrap.innerHTML = '';
+    (quizConfig.generos || ["Homem","Mulher"]).forEach((rotulo)=>{
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.type = 'button';
+      chip.setAttribute('role','radio');
+      chip.setAttribute('aria-pressed', 'false');
+      chip.textContent = rotulo;
+      chip.addEventListener('click', ()=>{
+        selectedGenero = rotulo;
+        [...generoChipWrap.children].forEach(c=>c.setAttribute('aria-pressed','false'));
+        chip.setAttribute('aria-pressed','true');
+      });
+      generoChipWrap.appendChild(chip);
+    });
+  }
+
+  let selectedOrientacao = null;
+  function renderOrientacaoChips(){
+    orientacaoChipWrap.innerHTML = '';
+    quizConfig.orientacoes.forEach((rotulo)=>{
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.type = 'button';
+      chip.setAttribute('role','radio');
+      chip.setAttribute('aria-pressed', 'false');
+      chip.textContent = rotulo;
+      chip.addEventListener('click', ()=>{
+        selectedOrientacao = rotulo;
+        [...orientacaoChipWrap.children].forEach(c=>c.setAttribute('aria-pressed','false'));
+        chip.setAttribute('aria-pressed','true');
+        if(rotulo === 'Outro'){
+          orientacaoOutro.style.display = '';
+          orientacaoOutro.focus();
+        } else {
+          orientacaoOutro.style.display = 'none';
+          orientacaoOutro.value = '';
+        }
+      });
+      orientacaoChipWrap.appendChild(chip);
+    });
+  }
+
+  function init(){
+    elTitle.textContent = quizConfig.titulo || 'Seu Quiz';
+    elDesc.textContent = quizConfig.descricao || '';
+    elFinalMessage.textContent = quizConfig.finalMessage || '';
+    screenAgeGate.style.display = '';
+    screenIntro.style.display = 'none';
+    screenQuiz.style.display = 'none';
+    screenResult.classList.remove('show');
+    elStepLabel.textContent = '+18';
+    elProgress.style.width = '0%';
+    renderGeneroChips();
+    renderOrientacaoChips();
+  }
+
+  // Perguntas
+  function renderPergunta(){
+    const total = quizConfig.perguntas.length;
+    const { texto, opcoes } = quizConfig.perguntas[indice];
+
+    elQuestion.textContent = texto;
+    elOptions.innerHTML = '';
+
+    opcoes.forEach((label, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn option';
+      btn.type = 'button';
+      btn.setAttribute('role', 'option');
+      btn.setAttribute('aria-selected', respostas[indice] === i ? 'true' : 'false');
+      btn.textContent = label;
+      if(respostas[indice] === i){ btn.classList.add('selected'); }
+      btn.addEventListener('click', () => selecionarOpcao(i, btn));
+      elOptions.appendChild(btn);
+    });
+
+    elStepLabel.textContent = `Pergunta ${indice+1}/${total}`;
+    btnNext.textContent = indice === total-1 ? 'Concluir' : 'Avançar ⟶';
+  }
+
+  function selecionarOpcao(opcaoIndex, btn){
+    respostas[indice] = opcaoIndex;
+    [...elOptions.children].forEach(b =>{ b.classList.remove('selected'); b.setAttribute('aria-selected','false'); });
+    btn.classList.add('selected');
+    btn.setAttribute('aria-selected','true');
+    btnNext.disabled = false;
+    updateProgress();
+  }
+
+  function avancar(){
+    const total = quizConfig.perguntas.length;
+    if(indice < total - 1){
+      indice++;
+      renderPergunta();
+      updateBotoes();
+      updateProgress();
+      btnNext.disabled = respostas[indice] === null;
+    } else {
+      mostrarResultado();
+    }
+  }
+
+  function voltar(){
+    if(indice > 0){
+      indice--;
+      renderPergunta();
+      updateBotoes();
+      updateProgress();
+      btnNext.disabled = respostas[indice] === null;
+    }
+  }
+
+  function updateBotoes(){
+    btnBack.disabled = indice === 0;
+    btnNext.disabled = respostas[indice] === null;
+  }
+
+  function updateProgress(){
+    const total = quizConfig.perguntas.length;
+    const answered = respostas.filter(v => v !== null).length;
+    const pct = Math.round((answered/total) * 100);
+    elProgress.style.width = pct + '%';
+  }
+
+  function mostrarResultado(){
+    screenQuiz.style.display = 'none';
+    screenResult.classList.add('show');
+    elFinalMessage.textContent = quizConfig.finalMessage || '';
+    ensureResultUI();
+    renderPercents();
+
+    // Dados iniciais
+    elUserData.innerHTML = '';
+    const orientacaoFinal = (selectedOrientacao === 'Outro' ? (orientacaoOutro.value || 'Outro') : selectedOrientacao) || '';
+    const generoFinal = selectedGenero || '';
+    const dados = [
+      ['Idade', userInfo.idade],
+      ['Gênero', generoFinal],
+      ['Altura', `${userInfo.altura} cm`],
+      ['Peso', `${userInfo.peso} kg`],
+      ['Orientação', orientacaoFinal]
+    ];
+    dados.forEach(([k,v]) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>${k}:</strong> ${v}`;
+      elUserData.appendChild(li);
+    });
+
+    // Respostas
+    elAnswers.innerHTML = '';
+    quizConfig.perguntas.forEach((p, idx) => {
+      const li = document.createElement('li');
+      const escolhida = respostas[idx];
+      const textoEscolha = escolhida !== null ? p.opcoes[escolhida] : '(sem resposta)';
+      li.innerHTML = `<strong>${idx+1}.</strong> ${p.texto}<br><em>Resposta:</em> ${textoEscolha}`;
+      elAnswers.appendChild(li);
+    });
+  }
+
+  // ===== WhatsApp =====
+  function buildWhatsAppText(){
+    const linhasTopo = [];
+    const orientacaoFinal = (selectedOrientacao === 'Outro' ? (orientacaoOutro.value || 'Outro') : selectedOrientacao) || '';
+    const generoFinal = selectedGenero || '';
+
+    // Saudação topo
+    const primeira = (quizConfig.firstMessage || "Olá!");
+    linhasTopo.push(primeira);
+
+    // Tapete de * (50 linhas)
+    const separador = Array.from({length: 50}, () => "*").join("\n");
+    linhasTopo.push(separador);
+
+    // Bloco final (dados + respostas)
+    const linhasFim = [];
+    linhasFim.push(`*${quizConfig.titulo || 'Quiz'}*`);
+    linhasFim.push('');
+    linhasFim.push('*Dados iniciais*');
+    linhasFim.push(`Idade: ${userInfo.idade}`);
+    linhasFim.push(`Gênero: ${generoFinal}`);
+    linhasFim.push(`Altura: ${userInfo.altura} cm`);
+    linhasFim.push(`Peso: ${userInfo.peso} kg`);
+    linhasFim.push(`Orientação: ${orientacaoFinal}`);
+    linhasFim.push('');
+    linhasFim.push('*Respostas*');
+    quizConfig.perguntas.forEach((p, i)=>{
+      const idx = respostas[i];
+      const r = idx !== null ? p.opcoes[idx] : '(sem resposta)';
+      linhasFim.push(`${i+1}. ${p.texto}\n- ${r}`);
+    });
+    linhasFim.push('');
+    if (quizConfig.finalMessage) linhasFim.push(quizConfig.finalMessage);
+
+    return [...linhasTopo, ...linhasFim].join('\n');
+  }
+
+  function enviarWhatsApp(){
+    const texto = buildWhatsAppText();
+    const numero = (quizConfig.whatsappNumber || '').replace(/\D/g,'');
+    const base = numero
+      ? `https://api.whatsapp.com/send?phone=${numero}&text=`
+      : 'https://api.whatsapp.com/send?text=';
+    const url = base + encodeURIComponent(texto);
+    window.open(url, '_blank');
+  }
+    
+  // ===== Resultado estimado (3 percentuais) + revelar/ocultar respostas =====
+function calcPercents() {
+  // Conta quantas vezes o usuário escolheu a 1ª, 2ª ou 3ª opção
+  const counts = [0, 0, 0];
+  respostas.forEach(idx => {
+    if (idx === 0) counts[0]++;
+    else if (idx === 1) counts[1]++;
+    else if (idx === 2) counts[2]++;
+  });
+
+  // Gera números aleatórios "puxados" para as contagens (quanto mais escolheu, maior tende a ser)
+  const bias = counts.map(c => c + 1); // evita zero
+  const rand = bias.map(w => Math.random() * (w + 0.5));
+  const sum = rand.reduce((a, b) => a + b, 0) || 1;
+
+  let p0 = Math.floor((rand[0] / sum) * 100);
+  let p1 = Math.floor((rand[1] / sum) * 100);
+  let p2 = 100 - p0 - p1;
+  if (p2 < 0) { p2 = 0; p1 = Math.max(0, 100 - p0); }
+
+  return [p0, p1, p2];
+}
+
+function ensureResultUI() {
+  const screenResult = document.getElementById('screen-result');
+  const answersList = document.getElementById('answers');
+  const answersHeader = answersList?.previousElementSibling;
+
+  // Bloco dos percentuais (cria só uma vez)
+  if (!document.getElementById('percentBox')) {
+    const box = document.createElement('div');
+    box.id = 'percentBox';
+    box.className = 'answers';
+    screenResult.insertBefore(box, answersHeader); // antes do "Suas escolhas"
+  }
+
+  // Botão revelar/ocultar (cria só uma vez)
+  if (!document.getElementById('btnToggleAnswers')) {
+    const btn = document.createElement('button');
+    btn.id = 'btnToggleAnswers';
+    btn.type = 'button';
+    btn.className = 'btn';
+    btn.textContent = 'Revelar respostas';
+    btn.addEventListener('click', () => {
+      const showing = answersList.style.display !== 'none';
+      if (showing) {
+        answersList.style.display = 'none';
+        if (answersHeader) answersHeader.style.display = 'none';
+        btn.textContent = 'Revelar respostas';
+      } else {
+        answersList.style.display = '';
+        if (answersHeader) answersHeader.style.display = '';
+        btn.textContent = 'Ocultar respostas';
+      }
+    });
+    screenResult.insertBefore(btn, answersHeader);
+  }
+
+  // Esconde respostas por padrão
+  answersList.style.display = 'none';
+  if (answersHeader) answersHeader.style.display = 'none';
+  const toggleBtn = document.getElementById('btnToggleAnswers');
+  if (toggleBtn) toggleBtn.textContent = 'Revelar respostas';
+}
+
+function renderPercents() {
+  const labels = (quizConfig.percentLabels?.length === 3)
+    ? quizConfig.percentLabels
+    : ['Opção A', 'Opção B', 'Opção C'];
+
+  const [a, b, c] = calcPercents();
+  const box = document.getElementById('percentBox');
+
+  box.innerHTML = `
+    <h3 style="margin:0 0 6px 0">Resultado estimado</h3>
+    <ul style="list-style:none; padding:0; display:grid; gap:8px">
+      <li class="answers"><strong>${labels[0]}:</strong> ${a}%</li>
+      <li class="answers"><strong>${labels[1]}:</strong> ${b}%</li>
+      <li class="answers"><strong>${labels[2]}:</strong> ${c}%</li>
+    </ul>
+  `;
+}
+  // ===== Planilha (Apps Script Web App) =====
+    function buildSheetPayload(){
+      const orientacaoFinal = (selectedOrientacao === 'Outro' ? (orientacaoOutro.value || 'Outro') : selectedOrientacao) || '';
+      const generoFinal = selectedGenero || '';
+
+      const payload = {
+        'Timestamp': new Date().toISOString(),
+        'Título do Quiz': (quizConfig.titulo || '').toString().trim(),
+        'Descrição': (quizConfig.descricao || '').toString().trim(),
+        'Idade': userInfo.idade ?? '',
+        'Gênero': generoFinal,
+        'Altura (cm)': userInfo.altura ?? '',
+        'Peso (kg)': userInfo.peso ?? '',
+        'Orientação': orientacaoFinal
+      };
+
+      // chaves únicas por pergunta
+      quizConfig.perguntas.forEach((p, i) => {
+        const idx = respostas[i];
+        const r = idx !== null ? p.opcoes[idx] : '';
+        const key = `Q ${String(i+1).padStart(2,'0')} - ${p.texto}`;
+        payload[key] = r;
+      });
+
+      return payload;
+    }
+
+
+
+  async function enviarPlanilha(){
+    const url = quizConfig.sheetWebAppURL;
+    if(!url){
+      console.warn('sheetWebAppURL não configurado.');
+      return;
+    }
+    const body = JSON.stringify(buildSheetPayload());
+    try {
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors', // evita bloqueio CORS; resposta fica "opaque"
+        headers: { 'Content-Type': 'application/json' },
+        body
+      });
+    } catch (err) {
+      console.error('Falha ao enviar para a planilha:', err);
+    }
+  }
+
+  // Validação
+  function validarPreDados(){
+    const idade = parseInt(idadeInput.value,10);
+    const altura = parseInt(alturaInput.value,10);
+    const peso = parseFloat(pesoInput.value);
+    const orientacaoVal = selectedOrientacao === 'Outro' ? (orientacaoOutro.value || '').trim() : selectedOrientacao;
+
+    errGenero.style.display = (!selectedGenero) ? 'block' : 'none';
+    errIdade.style.display = (!Number.isFinite(idade) || idade < 18) ? 'block' : 'none';
+    errAltura.style.display = (!Number.isFinite(altura) || altura <= 0) ? 'block' : 'none';
+    errPeso.style.display = (!Number.isFinite(peso) || peso <= 0) ? 'block' : 'none';
+    errOrientacao.style.display = (!orientacaoVal || orientacaoVal.length === 0) ? 'block' : 'none';
+
+    if([errGenero,errIdade,errAltura,errPeso,errOrientacao].some(e=>e.style.display==='block')) return null;
+
+    return { idade, altura, peso, genero: selectedGenero, orientacao: orientacaoVal };
+  }
+
+  function startQuiz(){
+    const dados = validarPreDados();
+    if(!dados) return;
+
+    userInfo.idade = dados.idade; userInfo.altura = dados.altura; userInfo.peso = dados.peso; userInfo.genero = dados.genero; userInfo.orientacao = dados.orientacao;
+
+    screenIntro.style.display = 'none';
+    screenQuiz.style.display = '';
+
+    indice = 0;
+    renderPergunta();
+    updateBotoes();
+    updateProgress();
+    elStepLabel.textContent = `Pergunta ${indice+1}/${quizConfig.perguntas.length}`;
+  }
+
+  // Ações
+  btnNext?.addEventListener('click', avancar);
+  btnBack?.addEventListener('click', voltar);
+
+  btnReiniciar?.addEventListener('click', ()=>{ location.reload(); });
+
+  // CONCLUIR: envia planilha e abre WhatsApp
+  btnWhatsApp?.addEventListener('click', async () => {
+    await enviarPlanilha();
+    enviarWhatsApp();
+  });
+
+  btnStart?.addEventListener('click', startQuiz);
+  btnIntroBack?.addEventListener('click', ()=>{
+    screenIntro.style.display = 'none';
+    screenAgeGate.style.display = '';
+    elStepLabel.textContent = '+18';
+  });
+  btnAgeContinue?.addEventListener('click', ()=>{
+    screenAgeGate.style.display = 'none';
+    screenIntro.style.display = '';
+    elStepLabel.textContent = 'Pré-quiz';
+  });
+  btnAgeExit?.addEventListener('click', ()=>{
+    window.location.href = 'about:blank';
+  });
+
+  // Acessibilidade básica via teclado (quiz)
+  document.addEventListener('keydown', (e)=>{
+    if(screenQuiz.style.display==='none') return;
+    const focusable = [...elOptions.children];
+    const currentIndex = focusable.indexOf(document.activeElement);
+    if(["ArrowRight","ArrowDown"].includes(e.key)){
+      e.preventDefault();
+      const ni = Math.min((currentIndex>=0?currentIndex: -1)+1, focusable.length-1);
+      focusable[ni]?.focus();
+    }
+    if(["ArrowLeft","ArrowUp"].includes(e.key)){
+      e.preventDefault();
+      const ni = Math.max((currentIndex>=0?currentIndex: focusable.length)+-1, 0);
+      focusable[ni]?.focus();
+    }
+    if(e.key === 'Enter' && document.activeElement?.classList.contains('option')){
+      document.activeElement.click();
+    }
+  });
+    
+    (function(){
+  const INACTIVITY_MS = 7000; // 30s
+  let inactivityId = null;
+  let btnSkip = null;
+
+  // Garante envio "uma vez só", reaproveitando sua função existente:
+  const _enviarPlanilha = enviarPlanilha;
+  let planilhaEnviada = false;
+  enviarPlanilha = async function(){
+    if (planilhaEnviada) return;
+    try { await _enviarPlanilha(); } finally { planilhaEnviada = true; }
+  };
+
+  function ensureSkipButton(){
+    if (btnSkip) return btnSkip;
+    btnSkip = document.createElement('button');
+    btnSkip.id = 'btnSkip';
+    btnSkip.type = 'button';
+    btnSkip.className = 'btn';
+    btnSkip.textContent = 'Pular pergunta';
+    btnSkip.style.display = 'none';
+    btnSkip.addEventListener('click', ()=>{
+      // Mantém a pergunta como sem resposta (null) e avança
+      hideSkipButton();
+      avancar();
+    });
+    // Insere sem mexer no HTML: usa o mesmo container do botão "Avançar"
+    btnNext?.parentElement?.insertBefore(btnSkip, btnNext);
+    return btnSkip;
+  }
+  function showSkipButton(){ ensureSkipButton(); btnSkip.style.display = ''; }
+  function hideSkipButton(){ if (btnSkip) btnSkip.style.display = 'none'; }
+
+  function resetInactivityWatch(){
+    if (inactivityId) { clearTimeout(inactivityId); inactivityId = null; }
+    hideSkipButton();
+    if (screenQuiz.style.display !== 'none') {
+      inactivityId = setTimeout(()=>{ showSkipButton(); }, INACTIVITY_MS);
+    }
+  }
+
+  // Patch de hooks sem alterar sua estrutura
+  (function hookRenderPergunta(){
+    const _renderPergunta = renderPergunta;
+    renderPergunta = function(){
+      _renderPergunta.apply(this, arguments);
+      resetInactivityWatch(); // reinicia o temporizador a cada pergunta exibida
+    };
+  })();
+
+  // Reseta temporizador ao navegar
+  btnNext?.addEventListener('click', resetInactivityWatch);
+  btnBack?.addEventListener('click', resetInactivityWatch);
+
+  // Reseta temporizador ao selecionar uma opção (qualquer .option dentro de #options)
+  elOptions.addEventListener('click', (e)=>{
+    if (e.target.closest('.option')) resetInactivityWatch();
+  });
+
+  // Ao ir para o resultado, limpa temporizador e envia para a planilha quando clicar em "Revelar respostas" (uma única vez)
+  (function hookMostrarResultado(){
+    const _mostrarResultado = mostrarResultado;
+    mostrarResultado = function(){
+      hideSkipButton();
+      if (inactivityId) { clearTimeout(inactivityId); inactivityId = null; }
+      _mostrarResultado.apply(this, arguments);
+
+      // Envia ao clicar no botão "Revelar respostas" (apenas na 1ª vez)
+      const onFirstReveal = (ev)=>{
+        if (ev.target && ev.target.id === 'btnToggleAnswers') {
+          enviarPlanilha(); // protegido por "uma vez só"
+          document.removeEventListener('click', onFirstReveal);
+        }
+      };
+      document.addEventListener('click', onFirstReveal);
+    };
+  })();
+})();
+    
+ (function(){
+  // ===== AJUSTE AQUI =====
+  const landingImage = 'home.jpg'; // imagem da tela inicial
+  const TOTAL_BG = 240;            // total de imagens sequenciais
+  const IMG_DIR  = '.';            // '.' se estiver na raiz; 'img' se estiver em /img
+  const EXT      = 'jpg';          // 'jpg' | 'png' | 'webp'
+  // =======================
+
+  // gera: bg001.jpg ... bg240.jpg (com zero-padding)
+  const bgImages = Array.from({ length: TOTAL_BG }, (_, i) =>
+    `${IMG_DIR}/bg${String(i + 1).padStart(3, '0')}.${EXT}`
+  );
+
+  function applyBg(url){
+    if (!url) return;
+    document.documentElement.style.setProperty('--bg-img', `url("${url}")`);
+  }
+
+  // pré-carrega e loga no console (erros 404 não quebram o site)
+  [...new Set([...(bgImages||[]), landingImage].filter(Boolean))].forEach(src=>{
+    const im = new Image();
+    im.onload  = ()=>console.log('BG OK:', src);
+    im.onerror = ()=>console.warn('BG ERRO:', src, '→ arquivo não encontrado?');
+    im.src = src;
+  });
+
+  let landing = null;
+  let pool = [];
+  let last = null;
+
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  function refill(){
+    pool = bgImages.filter(x => x && x !== landing);
+    if (!pool.length && bgImages.length) pool = bgImages.slice();
+  }
+
+  function nextBg(){
+    if (!pool.length) refill();
+    if (!pool.length) return null;
+    let choice = pick(pool);
+    if (last && pool.length > 1 && choice === last){
+      const alt = pool.filter(x => x !== last);
+      if (alt.length) choice = pick(alt);
+    }
+    pool = pool.filter(x => x !== choice);
+    last = choice;
+    return choice;
+  }
+
+  function changeAfterTick(){ setTimeout(()=>applyBg(nextBg()), 0); }
+
+  // aplica landing ao carregar
+  function setLanding(){
+    landing = landingImage || (bgImages.length ? pick(bgImages) : null);
+    applyBg(landing);
+    refill();
+  }
+
+  // amarra nos botões
+  function wire(){
+    const btnStart = document.getElementById('btnStart');
+    const btnNext  = document.getElementById('btnNext');
+
+    btnStart?.addEventListener('click', changeAfterTick);
+    btnNext ?.addEventListener('click', changeAfterTick);
+
+    // Pular pergunta (criado depois)
+    document.addEventListener('click', (e)=>{
+      if (e.target && e.target.id === 'btnSkip') changeAfterTick();
+    });
+  }
+
+  setLanding();
+  wire();
+})();
+  // Start
+  init();
+  </script>
+</body>
+</html>
